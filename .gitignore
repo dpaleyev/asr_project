@@ -104,7 +104,7 @@ ENV/
 data/
 input/
 saved/
-dla_venv/
+asr_env/
 wandb/
 
 # editor, os cache directory
