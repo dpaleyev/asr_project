@@ -113,7 +113,7 @@ class Trainer(BaseTrainer):
                 self.writer.add_scalar(
                     "learning rate", self.lr_scheduler.get_last_lr()[0]
                 )
-                self._log_predictions(**batch)
+                self._log_predictions(**batch, is_train=True)
                 self._log_spectrogram(batch["spectrogram"])
                 self._log_audio(batch["audio"])
                 self._log_scalars(self.train_metrics)
@@ -180,7 +180,7 @@ class Trainer(BaseTrainer):
                 )
             self.writer.set_step(epoch * self.len_epoch, part)
             self._log_scalars(self.evaluation_metrics)
-            self._log_predictions(**batch)
+            self._log_predictions(**batch, is_train=False)
             self._log_spectrogram(batch["spectrogram"])
             self._log_audio(batch["audio"])
 
@@ -206,6 +206,7 @@ class Trainer(BaseTrainer):
             log_probs_length,
             audio_path,
             examples_to_log=10,
+            is_train=True,
             *args,
             **kwargs,
     ):
@@ -219,21 +220,51 @@ class Trainer(BaseTrainer):
         ]
         argmax_texts_raw = [self.text_encoder.decode(inds) for inds in argmax_inds]
         argmax_texts = [self.text_encoder.ctc_decode(inds) for inds in argmax_inds]
-        tuples = list(zip(argmax_texts, text, argmax_texts_raw, audio_path))
-        shuffle(tuples)
         rows = {}
-        for pred, target, raw_pred, audio_path in tuples[:examples_to_log]:
-            target = BaseTextEncoder.normalize_text(target)
-            wer = calc_wer(target, pred) * 100
-            cer = calc_cer(target, pred) * 100
 
-            rows[Path(audio_path).name] = {
-                "target": target,
-                "raw prediction": raw_pred,
-                "predictions": pred,
-                "wer": wer,
-                "cer": cer,
-            }
+        if is_train:
+            tuples = list(zip(argmax_texts, text, argmax_texts_raw, audio_path))
+            shuffle(tuples)
+            
+            for pred, target, raw_pred, audio_path in tuples[:examples_to_log]:
+                target = BaseTextEncoder.normalize_text(target)
+                wer = calc_wer(target, pred) * 100
+                cer = calc_cer(target, pred) * 100
+
+                rows[Path(audio_path).name] = {
+                    "target": target,
+                    "raw prediction": raw_pred,
+                    "predictions": pred,
+                    "wer": wer,
+                    "cer": cer,
+                }
+        else:
+            beam_search_results = self.text_encoder.ctc_beam_search_batch(
+                log_probs, log_probs_length, beam_size=3
+            )
+            tuples = list(zip(argmax_texts, beam_search_results, text, argmax_texts_raw, audio_path))
+            shuffle(tuples)
+            
+            for pred, bs_pred, target, raw_pred, audio_path in tuples[:examples_to_log]:
+                target = BaseTextEncoder.normalize_text(target)
+                wer = calc_wer(target, pred) * 100
+                cer = calc_cer(target, pred) * 100
+
+                wer_bs = calc_wer(target, pred) * 100
+                cer_bs = calc_cer(target, pred) * 100
+
+                rows[Path(audio_path).name] = {
+                    "target": target,
+                    "raw prediction": raw_pred,
+                    "predictions": pred,
+                    "wer": wer,
+                    "cer": cer,
+                    "predictions_bs": bs_pred,
+                    "wer_bs": wer_bs,
+                    "cer_bs": cer_bs,
+                }
+
+
         self.writer.add_table("predictions", pd.DataFrame.from_dict(rows, orient="index"))
 
     def _log_spectrogram(self, spectrogram_batch):

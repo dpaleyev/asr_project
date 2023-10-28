@@ -55,7 +55,7 @@ class CTCCharTextEncoder(CharTextEncoder):
         state_trunc = sorted(list(state.items()), key=lambda x: x[1], reverse=True)[:beam_size]
         return dict(state_trunc)
 
-    def ctc_beam_search(self, probs: torch.tensor, probs_length: int, beam_size: int = 100) -> List[Hypothesis]:
+    def ctc_beam_search(self, probs: torch.Tensor, probs_length: int, beam_size: int = 100) -> List[Hypothesis]:
         """
         Performs beam search and returns a list of pairs (hypothesis, hypothesis probability).
         """
