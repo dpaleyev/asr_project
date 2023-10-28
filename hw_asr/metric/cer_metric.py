@@ -36,7 +36,7 @@ class BeamSearchCERMetric(BaseMetric):
     def __call__(self, log_probs: Tensor, log_probs_length: Tensor, text: List[str], **kwargs):
         cers = []
         lengths = log_probs_length.detach().numpy()
-        for log_prob_vec, length, target_text in zip(log_probs, lengths, text):
+        for log_prob_vec, length, target_text in zip(log_probs.detach().cpu(), lengths, text):
             target_text = BaseTextEncoder.normalize_text(target_text)
             hyps = self.text_encoder.ctc_beam_search(log_prob_vec, length, beam_size=self.beam_size)
             pred_text = hyps[0].text
