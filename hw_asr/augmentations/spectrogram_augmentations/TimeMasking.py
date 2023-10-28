@@ -6,12 +6,8 @@ from hw_asr.augmentations.base import AugmentationBase
 
 
 class TimeMasking(AugmentationBase):
-    def __init__(self, p, *args, **kwargs) -> None:
+    def __init__(self, *args, **kwargs) -> None:
         self.aug = T.TimeMasking(*args, **kwargs)
-        self.p = p
     
     def __call__(self, data: Tensor) -> Tensor:
-        if random.random() < self.p:
-            return self.aug(data.unsqueeze(1)).squeeze(1) 
-        else:
-            return data
+        return self.aug(data.unsqueeze(1)).squeeze(1)
