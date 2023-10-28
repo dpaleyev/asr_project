@@ -23,8 +23,8 @@
                 "type": "Noise",
                 "args": {
                     "sample_rate": 16000,
-                    "p": 0.15,
-                    "max_snr_in_db": 20
+                    "p": 0.2,
+                    "max_snr_in_db": 25
                 }
             },
             {
@@ -39,23 +39,16 @@
             {
                 "type": "FrequencyMasking",
                 "args": {
-                    "p": 0.45,
+                    "p": 0.3,
                     "freq_mask_param": 30
-                }
-            },
-            {
-                "type": "TimeMasking",
-                "args": {
-                    "p": 0.15,
-                    "time_mask_param": 60
                 }
             },
             {
                 "type": "TimeStretch",
                 "args": {
                     "p": 0.2,
-                    "min_alpha": 0.7,
-                    "max_alpha": 1.25,
+                    "min_alpha": 0.8,
+                    "max_alpha": 1.2,
                     "n_freq": 128
                 }
             }
