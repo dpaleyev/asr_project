@@ -142,16 +142,16 @@
             }
         },
         {
-          "type": "BeamSearchWERMetric",
+          "type": "BeamSearchWERMetricWithLM",
           "args": {
-          "name": "WER (beam search)",
+          "name": "WER (beam search + lm)",
           "beam_size": 3
           }
         },
         {
-          "type": "BeamSearchCERMetric",
+          "type": "BeamSearchCERMetricWithLM",
           "args": {
-          "name": "CER (beam search)",
+          "name": "CER (beam search + lm)",
           "beam_size": 3
           }
         }
