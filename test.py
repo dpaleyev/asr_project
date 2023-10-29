@@ -109,7 +109,7 @@ def main(config, out_file):
                 "TOTAL LM WER": sum(total_lm_wer) / len(total_lm_wer),
                 "TOTAL LM CER": sum(total_lm_cer) / len(total_lm_cer),
                 "TOTAL BEAM WER": sum(total_bs_wer) / len(total_bs_wer),
-                "TOTAL BEAM CER": sum(total_lm_cer) / len(total_bs_cer),
+                "TOTAL BEAM CER": sum(total_bs_cer) / len(total_bs_cer),
                 "TOTAL ARGMAX WER": sum(total_argmax_wer) / len(total_argmax_wer),
                 "TOTAL ARGMAX CER": sum(total_argmax_cer) / len(total_argmax_cer),
             }
