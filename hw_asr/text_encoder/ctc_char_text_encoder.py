@@ -4,7 +4,9 @@ import torch
 from collections import defaultdict
 
 from .char_text_encoder import CharTextEncoder
-
+from pyctcdecode.decoder import build_ctcdecoder
+import multiprocessing
+import numpy as np
 
 class Hypothesis(NamedTuple):
     text: str
@@ -14,11 +16,18 @@ class Hypothesis(NamedTuple):
 class CTCCharTextEncoder(CharTextEncoder):
     EMPTY_TOK = "^"
 
-    def __init__(self, alphabet: List[str] = None):
+    def __init__(self, alphabet: List[str] = None, use_lm: bool = False, lm_path: str = None, grams_path: str = None):
         super().__init__(alphabet)
         vocab = [self.EMPTY_TOK] + list(self.alphabet)
         self.ind2char = dict(enumerate(vocab))
         self.char2ind = {v: k for k, v in self.ind2char.items()}
+        self.use_lm = use_lm
+
+        if use_lm:
+            vocab_copy = [""] + [elem.upper() for elem in vocab[1:]]
+            with open(grams_path) as f:
+                unigrams = [line.strip() for line in f.readlines()]
+            self.decoder = build_ctcdecoder(vocab_copy, unigrams=unigrams, lm_path=lm_path)
 
     def ctc_decode(self, inds: List[int]) -> str:
         """
@@ -34,6 +43,16 @@ class CTCCharTextEncoder(CharTextEncoder):
                 res.append(char)
                 last_char = char
         return "".join(res)
+    
+    def lm_decode(self, probs: torch.Tensor, probs_length: torch.Tensor, beam_size: int = 100) -> List[str]:
+        logits_list = np.array([probs[i][:probs_length[i]].detach().cpu().numpy() for i in range(probs_length.shape[0])])
+
+        with multiprocessing.get_context("fork").Pool() as p:
+            lm_texts = self.model.decode_batch(p, logits_list, beam_width=beam_size)
+
+        lm_texts = [elem.replace("|", "").replace("??", "").replace("'", "").lower().strip() for elem in lm_texts]
+
+        return lm_texts
 
     def _extend_and_merge(self, frame, state) -> dict:
         new_state = defaultdict(float)
