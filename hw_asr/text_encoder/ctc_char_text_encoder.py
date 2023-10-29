@@ -28,7 +28,7 @@ class CTCCharTextEncoder(CharTextEncoder):
         if use_bpe:
             self.tokenizer = tokenizers.Tokenizer.from_file(tokenizer_path)
             self.char2ind = self.tokenizer.get_vocab()
-            self.ind2char = {self.char2ind[key].lower(): key for key in self.char2ind}
+            self.ind2char = {self.char2ind[key]: key.lower() for key in self.char2ind}
             self.ind2char[0] = self.EMPTY_TOK
             self.vocab = [self.ind2char[ind] for ind in range(len(self.ind2char))]
 
