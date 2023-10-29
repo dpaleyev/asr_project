@@ -48,7 +48,7 @@ class CTCCharTextEncoder(CharTextEncoder):
         logits_list = np.array([probs[i][:probs_length[i]].detach().cpu().numpy() for i in range(probs_length.shape[0])])
 
         with multiprocessing.get_context("fork").Pool() as p:
-            lm_texts = self.model.decode_batch(p, logits_list, beam_width=beam_size)
+            lm_texts = self.decoder.decode_batch(p, logits_list, beam_width=beam_size)
 
         lm_texts = [elem.replace("|", "").replace("??", "").replace("'", "").lower().strip() for elem in lm_texts]
 
