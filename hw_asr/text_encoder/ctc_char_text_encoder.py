@@ -7,6 +7,7 @@ from .char_text_encoder import CharTextEncoder
 from pyctcdecode.decoder import build_ctcdecoder
 import multiprocessing
 import numpy as np
+import tokenizers
 
 class Hypothesis(NamedTuple):
     text: str
@@ -16,18 +17,34 @@ class Hypothesis(NamedTuple):
 class CTCCharTextEncoder(CharTextEncoder):
     EMPTY_TOK = "^"
 
-    def __init__(self, alphabet: List[str] = None, use_lm: bool = False, lm_path: str = None, grams_path: str = None):
+    def __init__(self, alphabet: List[str] = None, use_lm: bool = False, lm_path: str = None, grams_path: str = None, use_bpe: bool = False, tokenizer_path: str = None):
         super().__init__(alphabet)
-        vocab = [self.EMPTY_TOK] + list(self.alphabet)
-        self.ind2char = dict(enumerate(vocab))
+        self.vocab = [self.EMPTY_TOK] + list(self.alphabet)
+        self.ind2char = dict(enumerate(self.vocab))
         self.char2ind = {v: k for k, v in self.ind2char.items()}
         self.use_lm = use_lm
+        self.use_bpe = use_bpe
+
+        if use_bpe:
+            self.tokenizer = tokenizers.Tokenizer.from_file(tokenizer_path)
+            self.char2ind = self.tokenizer.get_vocab()
+            self.ind2char = {self.char2ind[key].lower(): key for key in self.char2ind}
+            self.ind2char[0] = self.EMPTY_TOK
+            self.vocab = [self.ind2char[ind] for ind in range(len(self.ind2char))]
+
 
         if use_lm:
-            vocab_copy = [""] + [elem.upper() for elem in vocab[1:]]
+            vocab_copy = [""] + [elem.upper() for elem in self.vocab[1:]]
             with open(grams_path) as f:
                 unigrams = [line.strip() for line in f.readlines()]
             self.decoder = build_ctcdecoder(vocab_copy, unigrams=unigrams, kenlm_model_path=lm_path)
+    
+    def encode(self, text: str) -> torch.Tensor:
+        if not self.use_bpe:
+            return super().encode(text)
+        else:
+            text = self.normalize_text(text)
+            return torch.Tensor(self.tokenizer.encode(text.lower()).ids).unsqueeze(0)
 
     def ctc_decode(self, inds: List[int]) -> str:
         """
