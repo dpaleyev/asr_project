@@ -27,7 +27,7 @@ class CTCCharTextEncoder(CharTextEncoder):
             vocab_copy = [""] + [elem.upper() for elem in vocab[1:]]
             with open(grams_path) as f:
                 unigrams = [line.strip() for line in f.readlines()]
-            self.decoder = build_ctcdecoder(vocab_copy, unigrams=unigrams, lm_path=lm_path)
+            self.decoder = build_ctcdecoder(vocab_copy, unigrams=unigrams, kenlm_model_path=lm_path)
 
     def ctc_decode(self, inds: List[int]) -> str:
         """
