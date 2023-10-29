@@ -239,8 +239,7 @@ class Trainer(BaseTrainer):
                     "cer": cer,
                 }
         else:
-            beam_search_results = [self.text_encoder.ctc_beam_search(log_prob_vec, length, beam_size=3)[0].text 
-                                   for log_prob_vec, length, target_text in zip(log_probs.detach().cpu(), log_probs_length.detach().cpu(), text)]
+            beam_search_results = self.text_encoder.ctc_lm(log_probs, log_probs_length, 3)
             tuples = list(zip(argmax_texts, beam_search_results, text, argmax_texts_raw, audio_path))
             shuffle(tuples)
             
@@ -258,9 +257,9 @@ class Trainer(BaseTrainer):
                     "predictions": pred,
                     "wer": wer,
                     "cer": cer,
-                    "predictions_bs": bs_pred,
-                    "wer_bs": wer_bs,
-                    "cer_bs": cer_bs,
+                    "predictions_bs_lm": bs_pred,
+                    "wer_bs_lm": wer_bs,
+                    "cer_bs_lm": cer_bs,
                 }
 
 
