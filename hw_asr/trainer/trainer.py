@@ -239,7 +239,7 @@ class Trainer(BaseTrainer):
                     "cer": cer,
                 }
         else:
-            beam_search_results = self.text_encoder.ctc_lm(log_probs, log_probs_length, 3)
+            beam_search_results = self.text_encoder.lm_decode(log_probs, log_probs_length, 3)
             tuples = list(zip(argmax_texts, beam_search_results, text, argmax_texts_raw, audio_path))
             shuffle(tuples)
             
