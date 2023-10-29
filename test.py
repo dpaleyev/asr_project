@@ -11,6 +11,7 @@ from hw_asr.trainer import Trainer
 from hw_asr.utils import ROOT_PATH
 from hw_asr.utils.object_loading import get_dataloaders
 from hw_asr.utils.parse_config import ConfigParser
+from hw_asr.metric.utils import calc_cer, calc_wer
 
 DEFAULT_CHECKPOINT_PATH = ROOT_PATH / "default_test_model" / "checkpoint.pth"
 
@@ -45,6 +46,14 @@ def main(config, out_file):
     results = []
 
     with torch.no_grad():
+        total_lm_wer = []
+        total_lm_cer = []
+        total_bs_wer = []
+        total_bs_cer = []
+        total_argmax_wer = []
+        total_argmax_cer = []
+
+
         for batch_num, batch in enumerate(tqdm(dataloaders["test"])):
             batch = Trainer.move_batch_to_device(batch, device)
             output = model(**batch)
@@ -58,18 +67,53 @@ def main(config, out_file):
             )
             batch["probs"] = batch["log_probs"].exp().cpu()
             batch["argmax"] = batch["probs"].argmax(-1)
+            lm_beam_search_results = text_encoder.lm_decode(batch["probs"], batch["log_probs_length"], beam_size=20)
             for i in range(len(batch["text"])):
+                lm_wer = calc_wer(batch["text"][i], lm_beam_search_results[i]) * 100
+                total_lm_wer.append(lm_wer)
+                lm_cer = calc_cer(batch["text"][i], lm_beam_search_results[i]) * 100
+                total_lm_cer.append(lm_cer)
+
+                beam_search_pred = text_encoder.ctc_beam_search(
+                            batch["probs"][i], batch["log_probs_length"][i], beam_size=3
+                        )[0].text
+                beam_wer = calc_wer(batch["text"][i], beam_search_pred) * 100
+                total_bs_cer.append(beam_wer)
+                beam_cer = calc_cer(batch["text"][i], beam_search_pred) * 100
+                total_bs_wer.append(beam_cer)
+
                 argmax = batch["argmax"][i]
                 argmax = argmax[: int(batch["log_probs_length"][i])]
+                argmax_pred = text_encoder.ctc_decode(argmax.cpu().numpy())
+                argmax_wer = calc_wer(batch["text"][i], argmax_pred) * 100
+                total_argmax_wer.append(argmax_wer)
+                argmax_cer = calc_cer(batch["text"][i], argmax_pred) * 100
+                total_argmax_cer.append(argmax_cer)
+
                 results.append(
                     {
                         "ground_trurh": batch["text"][i],
-                        "pred_text_argmax": text_encoder.ctc_decode(argmax.cpu().numpy()),
-                        "pred_text_beam_search": text_encoder.ctc_beam_search(
-                            batch["probs"][i], batch["log_probs_length"][i], beam_size=100
-                        )[:10],
+                        "pred_text_argmax": argmax_pred,
+                        "argmar_wer": argmax_wer,
+                        "argmar_cer": argmax_cer,
+                        "pred_text_beam_search": beam_search_pred,
+                        "beam_wer": beam_wer,
+                        "beam_cer": beam_cer,
+                        "pred_lm": lm_beam_search_results[i],
+                        "lm_wer": lm_wer,
+                        "lm_cer": lm_cer
                     }
                 )
+        results.append(
+            {
+                "TOTAL LM WER": sum(total_lm_wer) / len(total_lm_wer),
+                "TOTAL LM CER": sum(total_lm_cer) / len(total_lm_cer),
+                "TOTAL BEAM WER": sum(total_bs_wer) / len(total_bs_wer),
+                "TOTAL BEAM CER": sum(total_lm_cer) / len(total_bs_cer),
+                "TOTAL ARGMAX WER": sum(total_argmax_wer) / len(total_argmax_wer),
+                "TOTAL ARGMAX CER": sum(total_argmax_cer) / len(total_argmax_cer),
+            }
+        )
     with Path(out_file).open("w") as f:
         json.dump(results, f, indent=2)
 
