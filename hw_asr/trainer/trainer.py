@@ -155,7 +155,7 @@ class Trainer(BaseTrainer):
 
         metrics.update("loss", batch["loss"].item())
         for met in self.metrics:
-            if not is_train or "BeamSearch" not in met.name:
+            if not is_train or "beam search" not in met.name:
                 metrics.update(met.name, met(**batch))
         return batch
 
@@ -211,7 +211,6 @@ class Trainer(BaseTrainer):
             *args,
             **kwargs,
     ):
-        # TODO: implement logging of beam search results
         if self.writer is None:
             return
         argmax_inds = log_probs.cpu().argmax(-1).numpy()
