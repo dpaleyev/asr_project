@@ -239,9 +239,8 @@ class Trainer(BaseTrainer):
                     "cer": cer,
                 }
         else:
-            beam_search_results = self.text_encoder.ctc_beam_search_batch(
-                log_probs, log_probs_length, beam_size=3
-            )
+            beam_search_results = [self.text_encoder.ctc_beam_search(log_prob_vec, length, beam_size=3)[0].text 
+                                   for log_prob_vec, length, target_text in zip(log_probs.detach().cpu(), log_probs_length.detach().cpu(), text)]
             tuples = list(zip(argmax_texts, beam_search_results, text, argmax_texts_raw, audio_path))
             shuffle(tuples)
             
@@ -250,8 +249,8 @@ class Trainer(BaseTrainer):
                 wer = calc_wer(target, pred) * 100
                 cer = calc_cer(target, pred) * 100
 
-                wer_bs = calc_wer(target, pred) * 100
-                cer_bs = calc_cer(target, pred) * 100
+                wer_bs = calc_wer(bs_pred, pred) * 100
+                cer_bs = calc_cer(bs_pred, pred) * 100
 
                 rows[Path(audio_path).name] = {
                     "target": target,
